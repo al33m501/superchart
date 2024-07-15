@@ -32,6 +32,7 @@ EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"}
 with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'cert.p'), 'rb') as f:
     cert = pickle.load(f)
 
+
 def get_current_date():
     return pd.Timestamp('2024-07-12 00:00:00')
 
