@@ -12,6 +12,8 @@ from moexalgo.session import authorize
 from moexalgo import Ticker, Market
 
 load_dotenv()
+
+
 # authorize(os.getenv("MOEX_LOGIN"), os.getenv("MOEX_PASSWORD"))
 # url = 'https://passport.moex.com/authenticate'
 # username = os.getenv("MOEX_LOGIN")
@@ -19,12 +21,16 @@ load_dotenv()
 # response = requests.get(url, auth=HTTPBasicAuth(username, password))
 # cert = response.cookies['MicexPassportCert']
 
-from marketdb.apimoex_connector import EXCHANGE_MAP
+# from marketdb.apimoex_connector import EXCHANGE_MAP, get_current_date
 
 
 class APIMOEXError(Exception):
     pass
 
+
+EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"},
+                "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
+                "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"}}
 
 with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'cert.p'), 'rb') as f:
     cert = pickle.load(f)
