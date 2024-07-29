@@ -19,56 +19,35 @@ load_dotenv()
 # response = requests.get(url, auth=HTTPBasicAuth(username, password))
 # cert = response.cookies['MicexPassportCert']
 
-# from marketdb.apimoex_connector import EXCHANGE_MAP, get_current_date
+from marketdb.apimoex_connector import EXCHANGE_MAP
 
 
 class APIMOEXError(Exception):
     pass
 
-EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"},
-                "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
-                "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"}}
 
 with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'cert.p'), 'rb') as f:
     cert = pickle.load(f)
 
 
-def get_current_date():
-    return pd.Timestamp('2024-07-12 00:00:00')
-
-# def get_current_candle(exchange, ticker, div_table):
-#     traded_date = get_current_date()
-#     ticker_divs_on_date = div_table[(div_table['ex_date'] == traded_date) & (div_table['ticker'] == ticker)]
-#     arguments = {'marketdata.columns': ('SECID,'
-#                                         'TIME,'
-#                                         'OPEN,'
-#                                         'LOW,'
-#                                         'HIGH,'
-#                                         'LAST,'
-#                                         'VOLTODAY')}
-#     with requests.Session() as session:
-#         request_url = (f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
-#                        f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{ticker}.json")
-#         iss = apimoex.ISSClient(session, request_url, arguments)
-#         data = iss.get()
-#     if len(data['marketdata']) == 1:
-#         data = data['marketdata'][0]
-#     else:
-#         raise APIMOEXError(f"Error when loading realtime price for {ticker}")
-#     ticker_prices_df = pd.DataFrame(
-#         [{'price_date': traded_date, 'PX_OPEN': data['OPEN'], 'PX_HIGH': data['HIGH'], 'PX_LOW': data['LOW'],
-#           'PX_LAST': data['LAST'], 'PX_VOLUME': data['VOLTODAY']}]).set_index('price_date')
-#     ticker_prices_df.index = pd.to_datetime(ticker_prices_df.index)
-#     if len(ticker_divs_on_date) > 0:
-#         ticker_prices_df[['PX_OPEN', 'PX_HIGH', 'PX_LOW', 'PX_LAST']] += float(
-#             ticker_divs_on_date['dividend_amount'].sum())
-#         st.markdown(
-#             f"Today dividend: **{float(ticker_divs_on_date['dividend_amount'].sum())} RUB**")
-#     return ticker_prices_df, data['TIME']
+def get_current_date(t='SBER', exchange='MOEX'):
+    arguments = {"interval": 1, 'from': pd.Timestamp.today().strftime(
+        "%Y-%m-%d") + " 09:59:00"}  # (pd.Timestamp.today()-pd.Timedelta(days=5)).strftime("%Y-%m-%d") + " 09:59:00"}
+    with requests.Session() as session:
+        request_url = (f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+                       f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{t}/candles.json")
+        iss = apimoex.ISSClient(session, request_url, arguments)
+        data = iss.get()
+    if len(data['candles']) == 0:
+        return None
+    else:
+        return pd.Timestamp(data['candles'][-1]['begin']).replace(hour=0, minute=0, second=0)
 
 
 def get_current_candle(exchange, ticker, div_table):
     traded_date = get_current_date()
+    if traded_date is None:
+        return None, None
     ticker_divs_on_date = div_table[(div_table['ex_date'] == traded_date) & (div_table['ticker'] == ticker)]
 
     arguments = {'marketdata.columns': ('SECID,'
@@ -213,9 +192,15 @@ def main():
     stock_data = base_dict[selected_stock][['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH']]
     try:
         rt_candle, time_updated = get_current_candle("MOEX", selected_stock, div_table)
-        if len(rt_candle.dropna()) == 1:
-            stock_data = pd.concat([stock_data, rt_candle[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH']]])
-            st.markdown(f"Price updated at: **{rt_candle.index[0]:%d.%m.%Y}** **{time_updated}**")
+        if rt_candle is None:
+            st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
+        elif len(rt_candle.dropna()) == 1:
+            print("rt_candle is not empty")
+            if not rt_candle.index[0] in stock_data.index:
+                stock_data = pd.concat([stock_data, rt_candle[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH']]])
+                st.markdown(f"Price updated at: **{rt_candle.index[0]:%d.%m.%Y}** **{time_updated}**")
+            else:
+                st.markdown(f"Price updated_at: **{stock_data.index[-1]:%d.%m.%Y}**")
         else:
             st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
     except:
