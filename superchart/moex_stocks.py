@@ -39,15 +39,15 @@ with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'cert.p'), 'rb') as f:
 def get_current_date(t='SBER', exchange='MOEX'):
     arguments = {"interval": 1, 'from': pd.Timestamp.today().strftime(
         "%Y-%m-%d") + " 09:59:00"}  # (pd.Timestamp.today()-pd.Timedelta(days=5)).strftime("%Y-%m-%d") + " 09:59:00"}
-    with requests.Session() as session:
-        request_url = (f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
-                       f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{t}/candles.json")
-        iss = apimoex.ISSClient(session, request_url, arguments)
-        data = iss.get()
-    if len(data['candles']) == 0:
+    response = requests.get(f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+                                f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{t}/candles.json",
+                                cookies={'MicexPassportCert': cert},
+                                params=arguments)
+    data = response.json()
+    if len(data['candles']['data']) == 0:
         return None
     else:
-        return pd.Timestamp(data['candles'][-1]['begin']).replace(hour=0, minute=0, second=0)
+        return pd.Timestamp(data['candles']['data'][-1][-1]).replace(hour=0, minute=0, second=0)
 
 
 def get_current_candle(exchange, ticker, div_table):
