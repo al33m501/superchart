@@ -22,7 +22,9 @@ load_dotenv()
 # response = requests.get(url, auth=HTTPBasicAuth(username, password))
 # cert = response.cookies['MicexPassportCert']
 
-from marketdb.apimoex_connector import EXCHANGE_MAP
+EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"},
+                "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
+                "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"}}
 
 
 class APIMOEXError(Exception):
