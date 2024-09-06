@@ -257,6 +257,9 @@ def render_candlestick_chart(data):
     COLOR_BULL = 'rgba(38,166,154,0.9)'  # #26a69a
     COLOR_BEAR = 'rgba(239,83,80,0.9)'  # #ef5350
 
+    data['chg'] = (data['close'] - data['open']) / data['open']
+    data.loc[data[data['chg'] <= 0].index, 'color'] = 'red'
+
     candles = json.loads(data.to_json(orient="records"))
     volume = json.loads(data.to_json(orient="records"))
 
