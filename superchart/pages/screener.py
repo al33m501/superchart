@@ -49,10 +49,18 @@ def get_current_stock_table(exchange):
 def get_stock_table(min_turnover=0):
     with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'last_prices.p'), 'rb') as f:
         last_prices = pickle.load(f)
-    stock_table = get_current_stock_table("MOEX").set_index("SECID")[['LAST', 'VALTODAY']].dropna()
+    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'div_table.p'), 'rb') as f:
+        div_table = pickle.load(f)
+    stock_table = get_current_stock_table("MOEX").set_index("SECID")[['LAST', 'VALTODAY', 'SYSTIME']].dropna()
     stock_table = pd.merge(left=stock_table, left_index=True,
                            right=last_prices.rename(columns={"PX_LAST": "yesterday_price"}), right_index=True)
-    stock_table['Return 1d, %'] = (stock_table['LAST'] - stock_table['yesterday_price']) / stock_table[
+    today_dt = pd.to_datetime(get_current_stock_table("MOEX")['SYSTIME'].iloc[0]).date()
+    stock_table = stock_table.drop(['SYSTIME'], axis=1)
+    today_divs = div_table[div_table['ex_date'] == today_dt.strftime("%Y-%m-%d")]
+    stock_table = pd.merge(left=stock_table, left_index=True, right=today_divs.set_index("ticker")['dividend_amount'],
+                           right_index=True, how='left')
+    stock_table['dividend_amount'] = stock_table['dividend_amount'].fillna(0)
+    stock_table['Return 1d, %'] = (stock_table['LAST'] + stock_table['dividend_amount'] - stock_table['yesterday_price']) / stock_table[
         'yesterday_price']
     stock_table = stock_table[['Return 1d, %', 'VALTODAY', 'MEDIAN_TURNOVER']].rename(
         columns={"VALTODAY": "Turnover today, M RUB",

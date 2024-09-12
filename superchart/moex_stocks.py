@@ -129,6 +129,7 @@ def render_diff_chart(ser, key):
 def render_candlestick_chart(data):
     data = data.rename(
         columns={"PX_LAST": 'close', 'PX_LOW': 'low', 'PX_HIGH': 'high', 'PX_OPEN': 'open', "PX_TURNOVER": "value"})
+
     data.index.name = 'time'
     data = data.reset_index()
     data['time'] = data['time'].astype(str)
