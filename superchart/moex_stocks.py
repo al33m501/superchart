@@ -292,6 +292,12 @@ def main():
         page_icon="📈",
         layout='wide'
     )
+    hide_menu_style = """
+                    <style>
+                    #MainMenu {visibility: hidden;}
+                    </style>
+                    """
+    st.markdown(hide_menu_style, unsafe_allow_html=True)
     rt_candle = None
     st.sidebar.subheader("""📈 Superchart""")
     with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list.p'), 'rb') as f:

@@ -264,6 +264,12 @@ def main():
         page_icon="📈",
         layout='wide'
     )
+    hide_menu_style = """
+                    <style>
+                    #MainMenu {visibility: hidden;}
+                    </style>
+                    """
+    st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
     with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex.p'), 'rb') as f:
         imoex = pickle.load(f)
