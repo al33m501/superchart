@@ -2,27 +2,14 @@ import streamlit as st
 import traceback
 import json
 from streamlit_lightweight_charts import renderLightweightCharts
-import streamlit_lightweight_charts.dataSamples as data
 import pickle
 import pandas as pd
 import numpy as np
 import os
-import apimoex
-from requests.auth import HTTPBasicAuth
 import requests
 from dotenv import load_dotenv
-from moexalgo.session import authorize
-from moexalgo import Ticker, Market
 
 load_dotenv()
-
-
-# authorize(os.getenv("MOEX_LOGIN"), os.getenv("MOEX_PASSWORD"))
-# url = 'https://passport.moex.com/authenticate'
-# username = os.getenv("MOEX_LOGIN")
-# password = os.getenv("MOEX_PASSWORD")
-# response = requests.get(url, auth=HTTPBasicAuth(username, password))
-# cert = response.cookies['MicexPassportCert']
 
 
 class APIMOEXError(Exception):
@@ -123,137 +110,6 @@ def render_candlestick_chart(data):
     data.index.name = 'time'
     data = data.reset_index()
     data['time'] = data['time'].astype(str)
-    # candle_dict = data.to_dict('records')
-    # vol_dict = data[['value']].to_dict('records')
-
-    # chartOptions = {
-    #     "height": 550,
-    #     "handleScroll": False,
-    #     "handleScale": False,
-    #     "layout": {
-    #         "textColor": 'black',
-    #         "background": {
-    #             "type": 'solid',
-    #             "color": 'white'
-    #         },
-    #     }
-    # }
-    # chartMultipaneOptions = [
-    #     {
-    #         "height": 550,
-    #         "handleScroll": False,
-    #         "handleScale": False,
-    #         "layout": {
-    #             "background": {
-    #                 "type": "solid",
-    #                 "color": 'white'
-    #             },
-    #             "textColor": "black"
-    #         },
-    #         "grid": {
-    #             "vertLines": {
-    #                 "color": "rgba(197, 203, 206, 0.5)"
-    #             },
-    #             "horzLines": {
-    #                 "color": "rgba(197, 203, 206, 0.5)"
-    #             }
-    #         },
-    #         "crosshair": {
-    #             "mode": 0
-    #         },
-    #         "priceScale": {
-    #             "borderColor": "rgba(197, 203, 206, 0.8)"
-    #         },
-    #         "timeScale": {
-    #             "borderColor": "rgba(197, 203, 206, 0.8)",
-    #             "barSpacing": 10,
-    #             "minBarSpacing": 8,
-    #             "timeVisible": True,
-    #             "secondsVisible": False,
-    #         },
-    #         # "watermark": {
-    #         #     "visible": True,
-    #         #     "fontSize": 48,
-    #         #     "horzAlign": 'center',
-    #         #     "vertAlign": 'center',
-    #         #     "color": 'rgba(171, 71, 188, 0.3)',
-    #         #     "text": 'Intraday',
-    #         # }
-    #     },
-    #     {
-    #         "height": 100,
-    #         "handleScroll": False,
-    #         "handleScale": False,
-    #         "layout": {
-    #             "background": {
-    #                 "type": 'solid',
-    #                 "color": 'transparent'
-    #             },
-    #             "textColor": 'black',
-    #         },
-    #         "grid": {
-    #             "vertLines": {
-    #                 "color": 'rgba(42, 46, 57, 0)',
-    #             },
-    #             "horzLines": {
-    #                 "color": 'rgba(42, 46, 57, 0.6)',
-    #             }
-    #         },
-    #         "timeScale": {
-    #             "visible": False,
-    #         },
-    #         # "watermark": {
-    #         #     "visible": True,
-    #         #     "fontSize": 18,
-    #         #     "horzAlign": 'left',
-    #         #     "vertAlign": 'top',
-    #         #     "color": 'rgba(171, 71, 188, 0.7)',
-    #         #     "text": 'Volume',
-    #         # }
-    #     },
-    # ]
-    # seriesCandlestickChart = [{
-    #     "type": 'Candlestick',
-    #     "data": candle_dict,
-    #     "options": {
-    #         "upColor": '#26a69a',
-    #         "downColor": '#ef5350',
-    #         "borderVisible": False,
-    #         "wickUpColor": '#26a69a',
-    #         "wickDownColor": '#ef5350'
-    #     }
-    # }]
-    #
-    # seriesVolumeChart = [
-    #     {
-    #         "type": 'Histogram',
-    #         "data": vol_dict,
-    #         "options": {
-    #             "priceFormat": {
-    #                 "type": 'volume',
-    #             },
-    #             "priceScaleId": ""  # set as an overlay setting,
-    #         },
-    #         "priceScale": {
-    #             "scaleMargins": {
-    #                 "top": 0,
-    #                 "bottom": 0,
-    #             },
-    #             "alignLabels": False
-    #         }
-    #     }
-    # ]
-
-    # renderLightweightCharts([
-    #     {
-    #         "chart": chartMultipaneOptions[0],
-    #         "series": seriesCandlestickChart
-    #     },
-    #     {
-    #         "chart": chartMultipaneOptions[1],
-    #         "series": seriesCandlestickChart
-    #     },
-    # ], 'multipane')
     COLOR_BULL = 'rgba(38,166,154,0.9)'  # #26a69a
     COLOR_BEAR = 'rgba(239,83,80,0.9)'  # #ef5350
 
@@ -412,7 +268,7 @@ def main():
     with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex.p'), 'rb') as f:
         imoex = pickle.load(f)
     # selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.index.to_list())
-    st.subheader(f"""IMOEX""")
+    # st.subheader(f"""IMOEX""")
     stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
                                        "CLOSE": "PX_LAST",
                                        "LOW": "PX_LOW",
@@ -422,18 +278,30 @@ def main():
     try:
         rt_candle, time_updated = get_current_candle("SNDX", "IMOEX")
         if rt_candle is None:
+            st.subheader(f"""IMOEX""")
             st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
         elif len(rt_candle.dropna()) == 1:
             if not rt_candle.index[0] in stock_data.index:
+                return_1d = (rt_candle['PX_LAST'].iloc[-1] - stock_data['PX_LAST'].iloc[-1]) / \
+                            stock_data['PX_LAST'].iloc[-1]
                 stock_data = pd.concat(
                     [stock_data, rt_candle[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]])
+                if return_1d > 0:
+                    st.subheader(f"""IMOEX :green[+{round(return_1d * 100, 2)}%]""")
+                    # st.markdown(f"")
+                else:
+                    st.subheader(f"""IMOEX :red[{round(return_1d * 100, 2)}%]""")
+                    # st.markdown(f"")
                 st.markdown(f"Price updated at: **{rt_candle.index[0]:%d.%m.%Y}** **{time_updated}**")
             else:
+                st.subheader(f"""IMOEX""")
                 st.markdown(f"Price updated_at: **{stock_data.index[-1]:%d.%m.%Y}**")
         else:
+            st.subheader(f"""IMOEX""")
             st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
     except Exception:
         print(traceback.format_exc())
+        st.subheader(f"""IMOEX""")
         st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
 
     selected_timeframe = st.selectbox("Select timeframe:", ['Daily', 'Weekly', 'Monthly'])
