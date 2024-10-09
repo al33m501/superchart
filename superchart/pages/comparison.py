@@ -155,6 +155,7 @@ def main():
         page_icon="📈",
         layout='wide'
     )
+    st.sidebar.subheader("""📈 Superchart""")
     render_all()
 
 
