@@ -59,25 +59,32 @@ def get_return_report():
     stock_table = pd.merge(left=stock_table, left_index=True, right=today_divs.set_index("ticker")['dividend_amount'],
                            right_index=True, how='left')
     stock_table['dividend_amount'] = stock_table['dividend_amount'].fillna(0)
-    all_prices = pd.DataFrame(index=base_dict['GAZP'].index.append(pd.DatetimeIndex([today_dt])))
+    if not stock_table.empty:
+        all_prices = pd.DataFrame(index=base_dict['GAZP'].index.append(pd.DatetimeIndex([today_dt])))
+    else:
+        all_prices = pd.DataFrame(index=base_dict['GAZP'].index)
     missing_tickers = []
     for t, prices in base_dict.items():
-        if t in stock_table.index:
+        if t in stock_table.index and not stock_table.empty:
             temp = base_dict[t]['PX_LAST']
             temp.loc[today_dt] = stock_table.loc[t, 'LAST'] + stock_table.loc[t, 'dividend_amount']
             all_prices[t] = temp.copy()
-        else:
+        elif stock_table.empty:
+            temp = base_dict[t]['PX_LAST']
+            all_prices[t] = temp.copy()
+        elif t not in stock_table.index and not stock_table.empty:
             missing_tickers.append(t)
     all_prices = all_prices.ffill()
     report = pd.DataFrame()
-    for old_date, friendly_name in zip([today_dt - pd.tseries.offsets.DateOffset(years=1),
-                                        today_dt - pd.tseries.offsets.DateOffset(months=1), ], ['1 year return',
-                                                                                                '1 month return', ]):
+    for old_date, friendly_name in zip([all_prices.index[-1] - pd.tseries.offsets.DateOffset(years=1),
+                                        all_prices.index[-1] - pd.tseries.offsets.DateOffset(months=1), ],
+                                       ['1 year return',
+                                        '1 month return', ]):
         nearest_dt = get_nearest_date_before(all_prices.index, old_date)
         report[friendly_name] = calc_return(
             all_prices,
             nearest_dt,
-            today_dt)
+            all_prices.index[-1])
     missing_tickers += report[report['1 year return'].isna() | report['1 month return'].isna()].index.tolist()
     return report, missing_tickers
 
@@ -139,7 +146,7 @@ def render_all():
         ]
     )
     st.plotly_chart(fig, use_container_width=True)
-    st.text(f"Missing tickers: {missing_tickers}")
+    st.text(f"Missing tickers: {missing_tickers}\nPossible reason: not enough data")
 
 
 def main():
