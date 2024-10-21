@@ -273,18 +273,28 @@ def main():
     st.sidebar.subheader("""📈 Superchart""")
     with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex.p'), 'rb') as f:
         imoex = pickle.load(f)
-    # selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.index.to_list())
+    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex2.p'), 'rb') as f:
+        imoex2 = pickle.load(f)
+    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX', 'IMOEX2'])
     # st.subheader(f"""IMOEX""")
-    stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
-                                       "CLOSE": "PX_LAST",
-                                       "LOW": "PX_LOW",
-                                       "HIGH": "PX_HIGH",
-                                       "VALTODAY_RUR": "PX_TURNOVER"})[
-        ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
+    if selected_stock == 'IMOEX':
+        stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
+                                           "CLOSE": "PX_LAST",
+                                           "LOW": "PX_LOW",
+                                           "HIGH": "PX_HIGH",
+                                           "VALTODAY_RUR": "PX_TURNOVER"})[
+            ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
+    elif selected_stock == 'IMOEX2':
+        stock_data = imoex2.rename(columns={"OPEN": "PX_OPEN",
+                                           "CLOSE": "PX_LAST",
+                                           "LOW": "PX_LOW",
+                                           "HIGH": "PX_HIGH",
+                                           "VALTODAY_RUR": "PX_TURNOVER"})[
+            ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
     try:
-        rt_candle, time_updated = get_current_candle("SNDX", "IMOEX")
+        rt_candle, time_updated = get_current_candle("SNDX", selected_stock)
         if rt_candle is None:
-            st.subheader(f"""IMOEX""")
+            st.subheader(f"""{selected_stock}""")
             st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
         elif len(rt_candle.dropna()) == 1:
             if not rt_candle.index[0] in stock_data.index:
@@ -293,21 +303,21 @@ def main():
                 stock_data = pd.concat(
                     [stock_data, rt_candle[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]])
                 if return_1d > 0:
-                    st.subheader(f"""IMOEX :green[+{round(return_1d * 100, 2)}%]""")
+                    st.subheader(f"""{selected_stock} :green[+{round(return_1d * 100, 2)}%]""")
                     # st.markdown(f"")
                 else:
-                    st.subheader(f"""IMOEX :red[{round(return_1d * 100, 2)}%]""")
+                    st.subheader(f"""{selected_stock} :red[{round(return_1d * 100, 2)}%]""")
                     # st.markdown(f"")
                 st.markdown(f"Price updated at: **{rt_candle.index[0]:%d.%m.%Y}** **{time_updated}**")
             else:
-                st.subheader(f"""IMOEX""")
+                st.subheader(f"""{selected_stock}""")
                 st.markdown(f"Price updated_at: **{stock_data.index[-1]:%d.%m.%Y}**")
         else:
-            st.subheader(f"""IMOEX""")
+            st.subheader(f"""{selected_stock}""")
             st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
     except Exception:
         print(traceback.format_exc())
-        st.subheader(f"""IMOEX""")
+        st.subheader(f"""{selected_stock}""")
         st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
 
     selected_timeframe = st.selectbox("Select timeframe:", ['Daily', 'Weekly', 'Monthly'])
