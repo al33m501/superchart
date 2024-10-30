@@ -300,6 +300,7 @@ def main():
             if not rt_candle.index[0] in stock_data.index:
                 return_1d = (rt_candle['PX_LAST'].iloc[-1] - stock_data['PX_LAST'].iloc[-1]) / \
                             stock_data['PX_LAST'].iloc[-1]
+
                 stock_data = pd.concat(
                     [stock_data, rt_candle[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]])
                 if return_1d > 0:
