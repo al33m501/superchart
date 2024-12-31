@@ -75,6 +75,7 @@ def get_return_report():
         elif t not in stock_table.index and not stock_table.empty:
             missing_tickers.append(t)
     all_prices = all_prices.ffill()
+    all_prices = all_prices[~all_prices.index.duplicated(keep='first')]
     report = pd.DataFrame()
     for old_date, friendly_name in zip([all_prices.index[-1] - pd.tseries.offsets.DateOffset(years=1),
                                         all_prices.index[-1] - pd.tseries.offsets.DateOffset(months=1), ],
