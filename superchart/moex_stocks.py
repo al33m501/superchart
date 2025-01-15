@@ -131,7 +131,7 @@ def render_diff_chart(ser, key):
             "bottomLineColor": 'rgba( 239, 83, 80, 1)',
             "bottomFillColor1": 'rgba( 239, 83, 80, 0.05)',
             "bottomFillColor2": 'rgba( 239, 83, 80, 0.28)'
-        }
+        },
     }]
     renderLightweightCharts([
         {
@@ -160,6 +160,7 @@ def render_candlestick_chart(data):
             "height": 550,
             "handleScroll": False,
             "handleScale": False,
+            # "mouseWheel": False,
             "layout": {
                 "background": {
                     "type": "solid",
@@ -311,13 +312,13 @@ def main():
     with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex2.p'), 'rb') as f:
         imoex2 = pickle.load(f)
     selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.index.to_list())
-    # st.subheader(f"""{selected_stock}""")
     stock_data = base_dict[selected_stock][['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
     try:
         rt_candle, time_updated = get_current_candle("MOEX", selected_stock, div_table)
         if rt_candle is None:
             st.subheader(f"""{selected_stock}""")
             st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
+            st.markdown(f"[Trading View](https://ru.tradingview.com/chart/?symbol={selected_stock})")
         elif len(rt_candle.dropna()) == 1:
             if not rt_candle.index[0] in stock_data.index:
                 return_1d = (rt_candle['PX_LAST'].iloc[-1] - stock_data['PX_LAST'].iloc[-1]) / \
@@ -326,21 +327,23 @@ def main():
                     [stock_data, rt_candle[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]])
                 if return_1d > 0:
                     st.subheader(f"""{selected_stock} :green[+{round(return_1d * 100, 2)}%]""")
-                    # st.markdown(f"")
                 else:
                     st.subheader(f"""{selected_stock} :red[{round(return_1d * 100, 2)}%]""")
-                    # st.markdown(f"")
                 st.markdown(f"Price updated at: **{rt_candle.index[0]:%d.%m.%Y}** **{time_updated}**")
+                st.markdown(f"[Trading View](https://ru.tradingview.com/chart/?symbol={selected_stock})")
             else:
                 st.subheader(f"""{selected_stock}""")
                 st.markdown(f"Price updated_at: **{stock_data.index[-1]:%d.%m.%Y}**")
+                st.markdown(f"[Trading View](https://ru.tradingview.com/chart/?symbol={selected_stock})")
         else:
             st.subheader(f"""{selected_stock}""")
             st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
+            st.markdown(f"[Trading View](https://ru.tradingview.com/chart/?symbol={selected_stock})")
     except Exception:
         print(traceback.format_exc())
         st.subheader(f"""{selected_stock}""")
         st.markdown(f"Price updated at: **{stock_data.index[-1]:%d.%m.%Y}**")
+        st.markdown(f"[Trading View](https://ru.tradingview.com/chart/?symbol={selected_stock})")
     st.markdown(
         f"Median turnover over last 90 calendar days: **{int(ticker_turnovers.loc[selected_stock] / 1e6)} M RUB**")
     selected_timeframe = st.selectbox("Select timeframe:", ['Daily', 'Weekly', 'Monthly'])
@@ -359,32 +362,37 @@ def main():
                 stock_data[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']].dropna().iloc[-252 * 15:],
                 'M'))
     st.subheader(f"""Log diff. ({selected_stock} vs MCFTR)""")
-
+    today_logdiff = None
     if not rt_candle is None:
         # st.markdown(f"Realtime price: {rt_candle_no_div['PX_LAST'].iloc[-1]}")
 
-        stock_data_idx = imoex2['CLOSE'].iloc[-1]
+        stock_data_idx = imoex2['CLOSE']
         rt_candle_idx, time_updated_idx = get_current_candle_idx("SNDX", "IMOEX2")
 
         stock_data = base_dict[selected_stock][['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
 
         alpha_1d = ((rt_candle['PX_LAST'].iloc[-1] - stock_data['PX_LAST'].iloc[-1]) / stock_data['PX_LAST'].iloc[-1]) - \
-                   ((rt_candle_idx['PX_LAST'].iloc[-1] - stock_data_idx) / stock_data_idx)
+                   ((rt_candle_idx['PX_LAST'].iloc[-1] - stock_data_idx.iloc[-1]) / stock_data_idx.iloc[-1])
 
-        stock_data = pd.concat(
-            [stock_data, rt_candle[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]])
+        # stock_data = pd.concat(
+        #     [stock_data, rt_candle[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]])
+        #
+        # imoex2_to_mcftr_adjusted = ((rt_candle_idx['PX_LAST'].iloc[-1] - stock_data_idx) / stock_data_idx) + 1 * \
+        #                            benchmark_raw.iloc[-1]
+        #
+        # benchmark_raw.loc[rt_candle_idx.index[-1]] = imoex2_to_mcftr_adjusted
 
-        imoex2_to_mcftr_adjusted = ((rt_candle_idx['PX_LAST'].iloc[-1] - stock_data_idx) / stock_data_idx) + 1 * \
-                                   benchmark_raw.iloc[-1]
-
-        benchmark_raw.loc[rt_candle_idx.index[-1]] = imoex2_to_mcftr_adjusted
+        stock_datafordiff = pd.concat(
+            [stock_data[stock_data.index == stock_data.index[-1]]['PX_LAST'], rt_candle['PX_LAST']])
+        idx_datafordiff = pd.concat([stock_data_idx[stock_data_idx.index == stock_data_idx.index[-1]], rt_candle_idx['PX_LAST']])
+        today_logdiff = compute_logdiff(stock_datafordiff, idx_datafordiff).iloc[-1]
 
         st.markdown(f"Diff. updated at: **{benchmark_raw.index[-1]:%d.%m.%Y} {time_updated_idx}**")
 
         if alpha_1d > 0:
-            st.markdown(f"""Today Alpha vs IMOEX2: **:green[+{round(alpha_1d * 100, 2)}%]**""")
+            st.markdown(f"""Today Alpha vs IMOEX2: **:green[+{round(alpha_1d * 100, 2)}%]**, today logdiff: {round(today_logdiff * 100, 2)}%, today diff: {round((stock_datafordiff.pct_change()-idx_datafordiff.pct_change()).iloc[-1] * 100, 2)}%""")
         else:
-            st.markdown(f"""Today Alpha vs IMOEX2: **:red[{round(alpha_1d * 100, 2)}%]**""")
+            st.markdown(f"""Today Alpha vs IMOEX2: **:red[{round(alpha_1d * 100, 2)}%]**, today logdiff: {round(today_logdiff * 100, 2)}%, today diff: {round((stock_datafordiff.pct_change()-idx_datafordiff.pct_change()).iloc[-1] * 100, 2)}%""")
     else:
         st.markdown(f"Diff. updated at: **{benchmark_raw.index[-1]:%d.%m.%Y}**")
     for lookback_period, timeframe in zip([365, 1095, 1825, 5475], ['1d', '1d', 'W-FRI', 'M']):
@@ -396,9 +404,15 @@ def main():
             last_prices = last_prices.resample(timeframe).last().ffill()
         logdiff = compute_logdiff(last_prices, benchmark).reindex(
             benchmark.index).bfill()
-        st.text(
-            f'last {int(lookback_period / 365)} years, timeframe {timeframe.replace("W-FRI", "weekly").replace("M", "monthly").replace("1d", "daily")}')
-        render_diff_chart(logdiff, f"{lookback_period}_{timeframe}")
+        if timeframe == '1d' and today_logdiff is not None:
+            logdiff.loc[rt_candle_idx.index[0]] = logdiff.iloc[-1] + today_logdiff
+            st.markdown(f"""last logdiffs: {logdiff.iloc[-2]}, {logdiff.iloc[-1]}""")
+        if today_logdiff is None:
+            st.markdown(f"""today logdiff is not loaded!""")
+        else:
+            st.text(
+                f'last {int(lookback_period / 365)} years, timeframe {timeframe.replace("W-FRI", "weekly").replace("M", "monthly").replace("1d", "daily")}')
+            render_diff_chart(logdiff, f"{lookback_period}_{timeframe}")
 
 
 main()
