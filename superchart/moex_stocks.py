@@ -407,9 +407,8 @@ def main():
         if timeframe == '1d' and today_logdiff is not None:
             logdiff.loc[rt_candle_idx.index[0]] = logdiff.iloc[-1] + today_logdiff
             st.markdown(f"""last logdiffs: {logdiff.iloc[-2]}, {logdiff.iloc[-1]}""")
-        # if today_logdiff is None:
-        #     st.markdown(f"""today logdiff is not loaded!""")
-        # else:
+        if today_logdiff is None:
+            st.markdown(f"""today logdiff is not loaded!""")
         st.text(
             f'last {int(lookback_period / 365)} years, timeframe {timeframe.replace("W-FRI", "weekly").replace("M", "monthly").replace("1d", "daily")}')
         render_diff_chart(logdiff, f"{lookback_period}_{timeframe}")
