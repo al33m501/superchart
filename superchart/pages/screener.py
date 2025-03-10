@@ -18,14 +18,19 @@ EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"}
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
                 "SNDX": {"market": "index", "engine": "stock", "board": "SNDX"}}
+token = os.getenv("APIMOEX_TOKEN")
 
 
 def get_current_stock_table(exchange):
     arguments = {}
-    response = requests.get(f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+    headers = {
+        'Authorization': f'Bearer {token}',
+    }
+    response = requests.get(f"https://apim.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
                             f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities.json",
-                            cookies={'MicexPassportCert': cert},
-                            params=arguments)
+                            headers=headers,
+                            params=arguments,
+                            verify=False)
     data = response.json()
     data = pd.DataFrame(data['marketdata']['data'], columns=data['marketdata']['columns'])
     return data

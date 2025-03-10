@@ -11,7 +11,7 @@ load_dotenv()
 
 class APIMOEXError(Exception):
     pass
-
+token = os.getenv("APIMOEX_TOKEN")
 
 with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'cert.p'), 'rb') as f:
     cert = pickle.load(f)
@@ -23,10 +23,14 @@ EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"}
 
 def get_current_stock_table(exchange):
     arguments = {}
-    response = requests.get(f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+    headers = {
+        'Authorization': f'Bearer {token}',
+    }
+    response = requests.get(f"https://apim.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
                             f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities.json",
-                            cookies={'MicexPassportCert': cert},
-                            params=arguments)
+                            headers=headers,
+                            params=arguments,
+                            verify=False)
     data = response.json()
     data = pd.DataFrame(data['marketdata']['data'], columns=data['marketdata']['columns'])
     return data

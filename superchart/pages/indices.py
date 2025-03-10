@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+token = os.getenv("APIMOEX_TOKEN")
+
 
 class APIMOEXError(Exception):
     pass
@@ -25,12 +27,16 @@ EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"}
 
 
 def get_current_date(t='SBER', exchange='MOEX'):
+    headers = {
+        'Authorization': f'Bearer {token}',
+    }
     arguments = {"interval": 1, 'from': pd.Timestamp.today().strftime(
         "%Y-%m-%d") + " 09:59:00"}  # (pd.Timestamp.today()-pd.Timedelta(days=5)).strftime("%Y-%m-%d") + " 09:59:00"}
-    response = requests.get(f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+    response = requests.get(f"https://apim.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
                             f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{t}/candles.json",
-                            cookies={'MicexPassportCert': cert},
-                            params=arguments)
+                            headers=headers,
+                            params=arguments,
+                            verify=False)
     data = response.json()
     if len(data['candles']['data']) == 0:
         return None
@@ -42,14 +48,15 @@ def get_current_candle(exchange, ticker):
     traded_date = get_current_date()
     if traded_date is None:
         return None, None
+    headers = {
+        'Authorization': f'Bearer {token}',
+    }
 
-    response = requests.get(f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+    response = requests.get(f"https://apim.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
                             f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{ticker}.json",
-                            cookies={'MicexPassportCert': cert},
-                            params={})
-    # {'SECID': 'IMOEX', 'BOARDID': 'SNDX', 'LASTVALUE': 2545.07, 'OPENVALUE': 2552.32, 'CURRENTVALUE': 2577.89, 'LASTCHANGE': 32.82, 'LASTCHANGETOOPENPRC': 1, 'LASTCHANGETOOPEN': 25.57, 'UPDATETIME': '12:52:36', 'LASTCHANGEPRC': 1.29, 'VALT
-    # ODAY': 60844276983.0, 'MONTHCHANGEPRC': -2.73, 'YEARCHANGEPRC': -16.82, 'SEQNUM': 20240903125236, 'SYSTIME': '2024-09-03 12:52:36', 'TIME': '12:52:36', 'VALTODAY_USD': 676037757.04, 'LASTCHANGEBP': 3282, 'MONTHCHANGEBP': -7243.00000000
-    # 0001, 'YEARCHANGEBP': -52122, 'CAPITALIZATION': 4745813177844, 'CAPITALIZATION_USD': 52730495868.8819, 'HIGH': 2593.44, 'LOW': 2519.01, 'TRADEDATE': '2024-09-03', 'TRADINGSESSION': '1', 'VOLTODAY': None}
+                            headers=headers,
+                            params={},
+                            verify=False)
     data = response.json()
     if len(data['marketdata']['data']) == 1:
         data = dict(zip(data['marketdata']['columns'], data['marketdata']['data'][0]))
@@ -275,7 +282,7 @@ def main():
         imoex = pickle.load(f)
     with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex2.p'), 'rb') as f:
         imoex2 = pickle.load(f)
-    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX', 'IMOEX2'])
+    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX'])
     # st.subheader(f"""IMOEX""")
     if selected_stock == 'IMOEX':
         stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
@@ -286,10 +293,10 @@ def main():
             ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
     elif selected_stock == 'IMOEX2':
         stock_data = imoex2.rename(columns={"OPEN": "PX_OPEN",
-                                           "CLOSE": "PX_LAST",
-                                           "LOW": "PX_LOW",
-                                           "HIGH": "PX_HIGH",
-                                           "VALTODAY_RUR": "PX_TURNOVER"})[
+                                            "CLOSE": "PX_LAST",
+                                            "LOW": "PX_LOW",
+                                            "HIGH": "PX_HIGH",
+                                            "VALTODAY_RUR": "PX_TURNOVER"})[
             ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
     try:
         rt_candle, time_updated = get_current_candle("SNDX", selected_stock)

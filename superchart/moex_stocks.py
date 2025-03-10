@@ -8,6 +8,7 @@ import numpy as np
 import os
 import requests
 from dotenv import load_dotenv
+from io import BytesIO
 
 load_dotenv()
 
@@ -23,15 +24,20 @@ EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"}
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
                 "SNDX": {"market": "index", "engine": "stock", "board": "SNDX"}}
+token = os.getenv("APIMOEX_TOKEN")
 
 
 def get_current_date(t='SBER', exchange='MOEX'):
+    headers = {
+        'Authorization': f'Bearer {token}',
+    }
     arguments = {"interval": 1, 'from': pd.Timestamp.today().strftime(
         "%Y-%m-%d") + " 09:59:00"}  # (pd.Timestamp.today()-pd.Timedelta(days=5)).strftime("%Y-%m-%d") + " 09:59:00"}
-    response = requests.get(f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+    response = requests.get(f"https://apim.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
                             f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{t}/candles.json",
-                            cookies={'MicexPassportCert': cert},
-                            params=arguments)
+                            headers=headers,
+                            params=arguments,
+                            verify=False)
     data = response.json()
     if len(data['candles']['data']) == 0:
         return None
@@ -39,15 +45,26 @@ def get_current_date(t='SBER', exchange='MOEX'):
         return pd.Timestamp(data['candles']['data'][-1][-1]).replace(hour=0, minute=0, second=0)
 
 
+def to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='SUPERCHART')
+    processed_data = output.getvalue()
+    return processed_data
+
+
 def get_current_candle_idx(exchange, ticker):
     traded_date = get_current_date()
     if traded_date is None:
         return None, None
-
-    response = requests.get(f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+    headers = {
+        'Authorization': f'Bearer {token}',
+    }
+    response = requests.get(f"https://apim.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
                             f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{ticker}.json",
-                            cookies={'MicexPassportCert': cert},
-                            params={})
+                            headers=headers,
+                            params={},
+                            verify=False)
     # {'SECID': 'IMOEX', 'BOARDID': 'SNDX', 'LASTVALUE': 2545.07, 'OPENVALUE': 2552.32, 'CURRENTVALUE': 2577.89, 'LASTCHANGE': 32.82, 'LASTCHANGETOOPENPRC': 1, 'LASTCHANGETOOPEN': 25.57, 'UPDATETIME': '12:52:36', 'LASTCHANGEPRC': 1.29, 'VALT
     # ODAY': 60844276983.0, 'MONTHCHANGEPRC': -2.73, 'YEARCHANGEPRC': -16.82, 'SEQNUM': 20240903125236, 'SYSTIME': '2024-09-03 12:52:36', 'TIME': '12:52:36', 'VALTODAY_USD': 676037757.04, 'LASTCHANGEBP': 3282, 'MONTHCHANGEBP': -7243.00000000
     # 0001, 'YEARCHANGEBP': -52122, 'CAPITALIZATION': 4745813177844, 'CAPITALIZATION_USD': 52730495868.8819, 'HIGH': 2593.44, 'LOW': 2519.01, 'TRADEDATE': '2024-09-03', 'TRADINGSESSION': '1', 'VOLTODAY': None}
@@ -78,10 +95,14 @@ def get_current_candle(exchange, ticker, div_table):
                                         'LAST,'
                                         'VOLTODAY,'
                                         'VALTODAY_RUR')}
-    response = requests.get(f"https://iss.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
+    headers = {
+        'Authorization': f'Bearer {token}',
+    }
+    response = requests.get(f"https://apim.moex.com/iss/engines/{EXCHANGE_MAP[exchange]['engine']}/"
                             f"markets/{EXCHANGE_MAP[exchange]['market']}/boards/{EXCHANGE_MAP[exchange]['board']}/securities/{ticker}.json",
-                            cookies={'MicexPassportCert': cert},
-                            params=arguments)
+                            headers=headers,
+                            params=arguments,
+                            verify=False)
     data = response.json()
     if len(data['marketdata']['data']) == 1:
         data = dict(zip(data['marketdata']['columns'], data['marketdata']['data'][0]))
@@ -384,15 +405,18 @@ def main():
 
         stock_datafordiff = pd.concat(
             [stock_data[stock_data.index == stock_data.index[-1]]['PX_LAST'], rt_candle['PX_LAST']])
-        idx_datafordiff = pd.concat([stock_data_idx[stock_data_idx.index == stock_data_idx.index[-1]], rt_candle_idx['PX_LAST']])
+        idx_datafordiff = pd.concat(
+            [stock_data_idx[stock_data_idx.index == stock_data_idx.index[-1]], rt_candle_idx['PX_LAST']])
         today_logdiff = compute_logdiff(stock_datafordiff, idx_datafordiff).iloc[-1]
 
         st.markdown(f"Diff. updated at: **{benchmark_raw.index[-1]:%d.%m.%Y} {time_updated_idx}**")
 
         if alpha_1d > 0:
-            st.markdown(f"""Today Alpha vs IMOEX2: **:green[+{round(alpha_1d * 100, 2)}%]**, today logdiff: {round(today_logdiff * 100, 2)}%, today diff: {round((stock_datafordiff.pct_change()-idx_datafordiff.pct_change()).iloc[-1] * 100, 2)}%""")
+            st.markdown(
+                f"""Today Alpha vs IMOEX2: **:green[+{round(alpha_1d * 100, 2)}%]**, today logdiff: {round(today_logdiff * 100, 2)}%, today diff: {round((stock_datafordiff.pct_change() - idx_datafordiff.pct_change()).iloc[-1] * 100, 2)}%""")
         else:
-            st.markdown(f"""Today Alpha vs IMOEX2: **:red[{round(alpha_1d * 100, 2)}%]**, today logdiff: {round(today_logdiff * 100, 2)}%, today diff: {round((stock_datafordiff.pct_change()-idx_datafordiff.pct_change()).iloc[-1] * 100, 2)}%""")
+            st.markdown(
+                f"""Today Alpha vs IMOEX2: **:red[{round(alpha_1d * 100, 2)}%]**, today logdiff: {round(today_logdiff * 100, 2)}%, today diff: {round((stock_datafordiff.pct_change() - idx_datafordiff.pct_change()).iloc[-1] * 100, 2)}%""")
     else:
         st.markdown(f"Diff. updated at: **{benchmark_raw.index[-1]:%d.%m.%Y}**")
     for lookback_period, timeframe in zip([365, 1095, 1825, 5475], ['1d', '1d', 'W-FRI', 'M']):
@@ -406,12 +430,20 @@ def main():
             benchmark.index).bfill()
         if timeframe == '1d' and today_logdiff is not None:
             logdiff.loc[rt_candle_idx.index[0]] = logdiff.iloc[-1] + today_logdiff
-            st.markdown(f"""last logdiffs: {logdiff.iloc[-2]}, {logdiff.iloc[-1]}""")
+            # st.markdown(f"""last logdiffs: {logdiff.iloc[-2]}, {logdiff.iloc[-1]}""")
+        excel_file = to_excel(logdiff.reset_index())
         if today_logdiff is None:
             st.markdown(f"""today logdiff is not loaded!""")
         st.text(
             f'last {int(lookback_period / 365)} years, timeframe {timeframe.replace("W-FRI", "weekly").replace("M", "monthly").replace("1d", "daily")}')
         render_diff_chart(logdiff, f"{lookback_period}_{timeframe}")
+        st.download_button(
+            label="💾",
+            data=excel_file,
+            file_name=f"{selected_stock}_logdiff.xlsx",
+            mime="application/vnd.ms-excel",
+            key=f"download_{selected_stock}_{lookback_period}_{timeframe}"
+        )
 
 
 main()
