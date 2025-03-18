@@ -45,12 +45,12 @@ def get_current_date(t='SBER', exchange='MOEX'):
         return pd.Timestamp(data['candles']['data'][-1][-1]).replace(hour=0, minute=0, second=0)
 
 
-def to_excel(df):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='SUPERCHART')
-    processed_data = output.getvalue()
-    return processed_data
+# def to_excel(df):
+#     output = BytesIO()
+#     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+#         df.to_excel(writer, index=False, sheet_name='SUPERCHART')
+#     processed_data = output.getvalue()
+#     return processed_data
 
 
 def get_current_candle_idx(exchange, ticker):
@@ -431,19 +431,19 @@ def main():
         if timeframe == '1d' and today_logdiff is not None:
             logdiff.loc[rt_candle_idx.index[0]] = logdiff.iloc[-1] + today_logdiff
             # st.markdown(f"""last logdiffs: {logdiff.iloc[-2]}, {logdiff.iloc[-1]}""")
-        excel_file = to_excel(logdiff.reset_index())
+        # excel_file = to_excel(logdiff.reset_index())
         if today_logdiff is None:
             st.markdown(f"""today logdiff is not loaded!""")
         st.text(
             f'last {int(lookback_period / 365)} years, timeframe {timeframe.replace("W-FRI", "weekly").replace("M", "monthly").replace("1d", "daily")}')
         render_diff_chart(logdiff, f"{lookback_period}_{timeframe}")
-        st.download_button(
-            label="💾",
-            data=excel_file,
-            file_name=f"{selected_stock}_logdiff.xlsx",
-            mime="application/vnd.ms-excel",
-            key=f"download_{selected_stock}_{lookback_period}_{timeframe}"
-        )
+        # st.download_button(
+        #     label="💾",
+        #     data=excel_file,
+        #     file_name=f"{selected_stock}_logdiff.xlsx",
+        #     mime="application/vnd.ms-excel",
+        #     key=f"download_{selected_stock}_{lookback_period}_{timeframe}"
+        # )
 
 
 main()
