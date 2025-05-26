@@ -45,6 +45,8 @@ def get_current_date(t='SBER', exchange='MOEX'):
 
 
 def get_current_candle(exchange, ticker):
+    if ticker == 'MCFTR':
+        return None, None
     traded_date = get_current_date()
     if traded_date is None:
         return None, None
@@ -247,6 +249,148 @@ def render_candlestick_chart(data):
         },
     ], 'multipane')
 
+def render_line_chart(data, data_vol):
+    data = data.rename("value")
+    data.index.name = 'time'
+    data = data.reset_index()
+    data['time'] = data['time'].astype(str)
+    data = data.to_dict('records')
+
+    data_vol = data_vol.rename(
+        columns={"PX_LAST": 'close', 'PX_LOW': 'low', 'PX_HIGH': 'high', 'PX_OPEN': 'open', "PX_TURNOVER": "value"})
+    data_vol.index.name = 'time'
+    data_vol = data_vol.reset_index()
+    data_vol['time'] = data_vol['time'].astype(str)
+
+    COLOR_BULL = 'rgba(38,166,154,0.9)'  # #26a69a
+    COLOR_BEAR = 'rgba(239,83,80,0.9)'  # #ef5350
+
+    # data['chg'] = (data['close'] - data['open']) / data['open']
+    # data.loc[data[data['chg'] <= 0].index, 'color'] = 'red'
+
+    volume = json.loads(data_vol.to_json(orient="records"))
+
+    chartMultipaneOptions = [
+        {
+            "height": 550,
+            "handleScroll": False,
+            "handleScale": False,
+            "layout": {
+                "background": {
+                    "type": "solid",
+                    "color": 'white'
+                },
+                "textColor": "black"
+            },
+            "grid": {
+                "vertLines": {
+                    "color": "rgba(197, 203, 206, 0.5)"
+                },
+                "horzLines": {
+                    "color": "rgba(197, 203, 206, 0.5)"
+                }
+            },
+            "crosshair": {
+                "mode": 0
+            },
+            "priceScale": {
+                "borderColor": "rgba(197, 203, 206, 0.8)"
+            },
+            "timeScale": {
+                "borderColor": "rgba(197, 203, 206, 0.8)",
+                "barSpacing": 15
+            },
+            # "watermark": {
+            #     "visible": True,
+            #     "fontSize": 48,
+            #     "horzAlign": 'center',
+            #     "vertAlign": 'center',
+            #     "color": 'rgba(171, 71, 188, 0.3)',
+            #     "text": 'AAPL - D1',
+            # }
+        },
+        {
+            "height": 100,
+            "handleScroll": False,
+            "handleScale": False,
+            "layout": {
+                "background": {
+                    "type": 'solid',
+                    "color": 'transparent'
+                },
+                "textColor": 'black',
+            },
+            "grid": {
+                "vertLines": {
+                    "color": "rgba(197, 203, 206, 0.5)"
+                },
+                "horzLines": {
+                    "color": "rgba(197, 203, 206, 0.5)"
+                }
+            },
+            "timeScale": {
+                "borderColor": "rgba(197, 203, 206, 0.8)",
+                "barSpacing": 15
+            },
+            "priceScale": {
+                "borderColor": "rgba(197, 203, 206, 0.8)"
+            },
+            # "watermark": {
+            #     "visible": True,
+            #     "fontSize": 18,
+            #     "horzAlign": 'left',
+            #     "vertAlign": 'top',
+            #     "color": 'rgba(171, 71, 188, 0.7)',
+            #     "text": 'Volume',
+            # }
+        },
+    ]
+
+    seriesBaselineChart = [{
+        "type": 'Baseline',
+        "data": data,
+        "options": {
+            "baseValue": {"type": "price", "price": 0},
+            "topLineColor": 'rgba( 38, 166, 154, 1)',
+            "topFillColor1": 'rgba( 38, 166, 154, 0.28)',
+            "topFillColor2": 'rgba( 38, 166, 154, 0.05)',
+            "bottomLineColor": 'rgba( 239, 83, 80, 1)',
+            "bottomFillColor1": 'rgba( 239, 83, 80, 0.05)',
+            "bottomFillColor2": 'rgba( 239, 83, 80, 0.28)'
+        }
+    }]
+
+    seriesVolumeChart = [
+        {
+            "type": 'Histogram',
+            "data": volume,
+            "options": {
+                "priceFormat": {
+                    "type": 'volume',
+                },
+                #     "priceScaleId": ""  # set as an overlay setting,
+                # },
+                # "priceScale": {
+                #     "scaleMargins": {
+                #         "top": 0,
+                #         "bottom": 0,
+                #     },
+                #     # "alignLabels": False
+            }
+        }
+    ]
+
+    renderLightweightCharts([
+        {
+            "chart": chartMultipaneOptions[0],
+            "series": seriesBaselineChart
+        },
+        {
+            "chart": chartMultipaneOptions[1],
+            "series": seriesVolumeChart
+        },
+    ], 'multipane')
+
 
 def compute_logdiff(series_1, series_2):
     logdata = np.log(pd.concat([series_1, series_2], axis=1).dropna())
@@ -282,7 +426,9 @@ def main():
         imoex = pickle.load(f)
     with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex2.p'), 'rb') as f:
         imoex2 = pickle.load(f)
-    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX'])
+    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'mcftr.p'), 'rb') as f:
+        mcftr = pickle.load(f)
+    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX', 'MCFTR'])
     # st.subheader(f"""IMOEX""")
     if selected_stock == 'IMOEX':
         stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
@@ -298,6 +444,12 @@ def main():
                                             "HIGH": "PX_HIGH",
                                             "VALTODAY_RUR": "PX_TURNOVER"})[
             ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
+    elif selected_stock == 'MCFTR':
+        stock_data = mcftr.to_frame("PX_LAST")
+        stock_data['PX_OPEN'] = stock_data['PX_LAST']
+        stock_data['PX_LOW'] = stock_data['PX_LAST']
+        stock_data['PX_HIGH'] = stock_data['PX_LAST']
+        stock_data['PX_TURNOVER'] = imoex['VALTODAY_RUR']
     try:
         rt_candle, time_updated = get_current_candle("SNDX", selected_stock)
         if rt_candle is None:
@@ -329,9 +481,13 @@ def main():
 
     selected_timeframe = st.selectbox("Select timeframe:", ['Daily', 'Weekly', 'Monthly'])
 
-    if selected_timeframe == 'Daily':
+    if selected_timeframe == 'Daily' and selected_stock != 'MCFTR':
         render_candlestick_chart(
             stock_data[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']].dropna().iloc[-252:])
+    elif selected_timeframe == 'Daily' and selected_stock == 'MCFTR':
+        render_line_chart(
+            stock_data['PX_OPEN'].dropna().iloc[-252:],
+        stock_data[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']].dropna().iloc[-252:])
     elif selected_timeframe == 'Weekly':
         render_candlestick_chart(
             resample_candlestick(
