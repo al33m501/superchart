@@ -22,7 +22,7 @@ class APIMOEXError(Exception):
     pass
 
 
-
+url = os.getenv("NEON_URL")
 EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"},
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
