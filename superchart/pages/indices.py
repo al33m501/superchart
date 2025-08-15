@@ -443,8 +443,8 @@ def main():
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
     imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")
-    mcftr = load_data_neon_sync("mcftr").set_index("TRADEDATE")[['CLOSE']]
-    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX', 'MCFTR'])
+    mcftr = load_data_neon_sync("mcftr").set_index("TRADEDATE")['CLOSE']
+    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'MCFTR'])
     # st.subheader(f"""IMOEX""")
     # if selected_stock == 'IMOEX':
     #     stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
