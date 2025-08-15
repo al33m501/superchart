@@ -2,13 +2,17 @@ import streamlit as st
 import traceback
 import json
 from streamlit_lightweight_charts import renderLightweightCharts
-import pickle
+import asyncio
+from sqlalchemy.ext.asyncio import create_async_engine
+# import pickle
 import pandas as pd
 import numpy as np
 import os
 import requests
 from dotenv import load_dotenv
-from io import BytesIO
+from sqlalchemy import (
+    create_engine, text
+)
 
 load_dotenv()
 
@@ -16,15 +20,37 @@ load_dotenv()
 class APIMOEXError(Exception):
     pass
 
-
-with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'cert.p'), 'rb') as f:
-    cert = pickle.load(f)
+#
+# with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'cert.p'), 'rb') as f:
+#     cert = pickle.load(f)
 
 EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"},
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
                 "SNDX": {"market": "index", "engine": "stock", "board": "SNDX"}}
 token = os.getenv("APIMOEX_TOKEN")
+url = os.getenv("NEON_URL")
+
+async def load_data_neon(query):
+    engine = create_async_engine(url)
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(text(query))
+            return pd.DataFrame(result)
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return []
+    finally:
+        await engine.dispose()
+
+
+def load_data_neon_sync(table):
+    df = asyncio.run(load_data_neon(f"select * from {table}"))
+    return df
+
+def load_data_neon_base_dict(ticker):
+    df = asyncio.run(load_data_neon(f"select * from base_dict where ticker = '{ticker}'"))
+    return df
 
 
 def get_current_date(t='SBER', exchange='MOEX'):
@@ -322,18 +348,23 @@ def main():
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     rt_candle = None
     st.sidebar.subheader("""📈 Superchart""")
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list.p'), 'rb') as f:
-        ticker_turnovers = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'mcftr.p'), 'rb') as f:
-        benchmark_raw = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'base_dict.p'), 'rb') as f:
-        base_dict = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'div_table.p'), 'rb') as f:
-        div_table = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex2.p'), 'rb') as f:
-        imoex2 = pickle.load(f)
+    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list.p'), 'rb') as f:
+    #     ticker_turnovers = pickle.load(f)
+    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'mcftr.p'), 'rb') as f:
+    #     benchmark_raw = pickle.load(f)
+    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'base_dict.p'), 'rb') as f:
+    #     base_dict = pickle.load(f)
+    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'div_table.p'), 'rb') as f:
+    #     div_table = pickle.load(f)
+    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex2.p'), 'rb') as f:
+    #     imoex2 = pickle.load(f)
+    ticker_turnovers = load_data_neon_sync("ticker_list").set_index('index')['0']
+    benchmark_raw = load_data_neon_sync("mcftr").set_index("TRADEDATE")['CLOSE']
+    imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")['CLOSE']
+    div_table = load_data_neon_sync("div_table")
+
     selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.index.to_list())
-    stock_data = base_dict[selected_stock][['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
+    stock_data = load_data_neon_base_dict(selected_stock).set_index("Date")[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
     try:
         rt_candle, time_updated = get_current_candle("MOEX", selected_stock, div_table)
         if rt_candle is None:

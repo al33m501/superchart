@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import re
 from streamlit_lightweight_charts import renderLightweightCharts
-import pickle
+# import pickle
 import os
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import (
     create_engine, text
 )
+import asyncio
+from sqlalchemy.ext.asyncio import create_async_engine
 
 load_dotenv()
 
@@ -188,6 +190,27 @@ def resample_candlestick(stock_data, timeframe):
     resampled_stock_data = stock_data.copy().resample(timeframe).apply(apply_map)
     return resampled_stock_data.rename(index={resampled_stock_data.index[-1]: stock_data.index[-1]}).dropna()
 
+async def load_data_neon(query):
+    engine = create_async_engine(url)
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(text(query))
+            return pd.DataFrame(result)
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return []
+    finally:
+        await engine.dispose()
+
+
+def load_data_neon_sync(table):
+    df = asyncio.run(load_data_neon(f"select * from {table}"))
+    return df
+
+def load_data_neon_base_dict(ticker):
+    df = asyncio.run(load_data_neon(f"select * from base_dict_bonds where ticker = '{ticker}'"))
+    return df
+
 
 def main():
     st.set_page_config(
@@ -202,13 +225,18 @@ def main():
                     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list_bonds.p'), 'rb') as f:
-        ticker_turnovers = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'base_dict_bonds.p'), 'rb') as f:
-        base_dict = pickle.load(f)
+    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list_bonds.p'), 'rb') as f:
+    #     ticker_turnovers = pickle.load(f)
+    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'base_dict_bonds.p'), 'rb') as f:
+    #     base_dict = pickle.load(f)
+
+    ticker_turnovers = load_data_neon_sync("ticker_list_bonds")
+
     selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.to_list())
     short_stock_name = re.sub(r'\([^)]*\)', '', selected_stock)
-    stock_data = base_dict[selected_stock][['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']]
+    stock_data = load_data_neon_base_dict(selected_stock).set_index("date")
+    stock_data.index = pd.to_datetime(stock_data.index)
+    stock_data = load_data_neon_base_dict(selected_stock)[['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']]
     # try:
     rt = get_rt(selected_stock)
     stock_data = pd.concat([stock_data, rt.set_index("TRADEDATE")])
