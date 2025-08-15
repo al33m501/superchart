@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 import asyncio
 import pandas as pd
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import (
+    create_engine, text
+)
 
 load_dotenv()
 
@@ -21,26 +24,30 @@ EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"}
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
                 "SNDX": {"market": "index", "engine": "stock", "board": "SNDX"}}
-# token = os.getenv("APIMOEX_TOKEN")
 
-async def get_rt(instrument):
-    url = "postgresql+asyncpg://al33m501:R5U0LcgeZVaM@ep-muddy-mouse-640259-pooler.eu-central-1.aws.neon.tech/superchart"
+url = os.getenv("NEON_URL")
+
+
+async def load_data_raw_sql_async():
     engine = create_async_engine(url)
-    query = f'''
-        select TRADEDATE, open_YTM, high_YTM, low_YTM, last_YTM, value from bars_daily_live bdl 
-        left join symbol s on s.secid = bdl.SECID 
-        where instrument='{instrument}'
-        limit 1
-        '''
-    with engine.connect() as conn:
-        data = conn.execute(query)
-    async with engine.begin() as conn:
-        await conn.run_sync(
-            lambda sync_conn: table.to_sql("bars_daily_live", sync_conn, index=False, if_exists="replace", chunksize=10000)
-        )
-    await engine.dispose()
-    rt = pd.DataFrame(data.fetchall(), columns=data.keys())
-    return rt
+    try:
+        async with engine.begin() as conn:
+            query = f"""
+            select * from bars_daily_live bdl 
+            """
+            result = await conn.execute(text(query))
+            return pd.DataFrame(result)
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return []
+    finally:
+        await engine.dispose()
+
+
+def get_rt(instrument):
+    df = asyncio.run(load_data_raw_sql_async())
+    df = df[df['SECID'] == instrument]
+    return df
 
 
 def render_candlestick_chart(data):

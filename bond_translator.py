@@ -4,9 +4,11 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import (
     create_engine,
 )
-from sqlalchemy import text
+from time import sleep
+from dotenv import load_dotenv
+import os
 
-url = "postgresql+asyncpg://al33m501:R5U0LcgeZVaM@ep-muddy-mouse-640259-pooler.eu-central-1.aws.neon.tech/superchart"
+load_dotenv()
 
 
 def get_bars_daily_long_mysql():
@@ -21,6 +23,7 @@ def get_bars_daily_long_mysql():
 
 
 async def translator():
+    url = os.getenv("NEON_URL")
     engine = create_async_engine(url)
     table = get_bars_daily_long_mysql()
     async with engine.begin() as conn:
@@ -31,30 +34,31 @@ async def translator():
     await engine.dispose()
 
 
-# asyncio.run(translator())
+while True:
+    asyncio.run(translator())
+    sleep(60)
 
 # loader from postgre
-async def load_data_raw_sql_async(instrument):
-    engine = create_async_engine(url)
-    try:
-        async with engine.begin() as conn:
-            query = f"""
-            select * from bars_daily_live bdl 
-"""
-            result = await conn.execute(text(query))
-            # rows = result.fetchall()
-            # columns = result.keys()
-            # data = [dict(zip(columns, row)) for row in rows]
-            return pd.DataFrame(result)
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        return []
-    finally:
-        await engine.dispose()
-
-
-def get_rt(instrument):
-    return asyncio.run(load_data_raw_sql_async(instrument))
-
-
-print(get_rt("SU26243RMFS4"))
+# async def load_data_raw_sql_async(instrument):
+#     engine = create_async_engine(url)
+#     try:
+#         async with engine.begin() as conn:
+#             query = f"""
+#             select * from bars_daily_live bdl
+#             """
+#             result = await conn.execute(text(query))
+#             return pd.DataFrame(result)
+#     except Exception as e:
+#         print(f"Error loading data: {e}")
+#         return []
+#     finally:
+#         await engine.dispose()
+#
+#
+# def get_rt(instrument):
+#     df = asyncio.run(load_data_raw_sql_async(instrument))
+#     df = df[df['SECID'] == instrument]
+#     return df
+#
+#
+# print(get_rt("SU26243RMFS4"))
