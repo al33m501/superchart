@@ -446,7 +446,7 @@ def main():
     imoex = load_data_neon_sync("imoex").set_index("TRADEDATE")
     mcftr = load_data_neon_sync("mcftr").set_index("TRADEDATE")['CLOSE']
     selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX', 'MCFTR'])
-    st.subheader(f"""IMOEX""")
+    # st.subheader(f"""IMOEX""")
     if selected_stock == 'IMOEX':
         stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
                                            "CLOSE": "PX_LAST",
