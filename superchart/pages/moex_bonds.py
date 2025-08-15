@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import re
 from streamlit_lightweight_charts import renderLightweightCharts
+from sqlalchemy.pool import NullPool
 # import pickle
 import os
 from sqlalchemy import create_engine
@@ -31,11 +32,11 @@ url = os.getenv("NEON_URL")
 
 
 async def load_data_raw_sql_async():
-    engine = create_async_engine(url)
+    engine = create_async_engine(url, poolclass=NullPool)
     try:
         async with engine.begin() as conn:
             query = f"""
-            select * from bars_daily_live bdl 
+            select * from bars_daily_live2 bdl 
             """
             result = await conn.execute(text(query))
             return pd.DataFrame(result)
@@ -236,7 +237,6 @@ def main():
     short_stock_name = re.sub(r'\([^)]*\)', '', selected_stock)
     stock_data = load_data_neon_base_dict(selected_stock).set_index("date")
     stock_data.index = pd.to_datetime(stock_data.index)
-    stock_data = load_data_neon_base_dict(selected_stock)[['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']]
     # try:
     rt = get_rt(selected_stock)
     stock_data = pd.concat([stock_data, rt.set_index("TRADEDATE")])
