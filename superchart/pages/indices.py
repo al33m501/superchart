@@ -8,7 +8,11 @@ import numpy as np
 import os
 import requests
 from dotenv import load_dotenv
-
+from sqlalchemy import (
+    create_engine, text
+)
+import asyncio
+from sqlalchemy.ext.asyncio import create_async_engine
 load_dotenv()
 
 token = os.getenv("APIMOEX_TOKEN")
@@ -408,6 +412,22 @@ def resample_candlestick(stock_data, timeframe):
     resampled_stock_data = stock_data.copy().resample(timeframe).apply(apply_map)
     return resampled_stock_data.rename(index={resampled_stock_data.index[-1]: stock_data.index[-1]}).dropna()
 
+async def load_data_neon(query):
+    engine = create_async_engine(url)
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(text(query))
+            return pd.DataFrame(result)
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return []
+    finally:
+        await engine.dispose()
+
+
+def load_data_neon_sync(table):
+    df = asyncio.run(load_data_neon(f"select * from {table}"))
+    return df
 
 def main():
     st.set_page_config(
@@ -422,22 +442,18 @@ def main():
                     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex.p'), 'rb') as f:
-        imoex = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'imoex2.p'), 'rb') as f:
-        imoex2 = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'mcftr.p'), 'rb') as f:
-        mcftr = pickle.load(f)
+    imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")[['CLOSE']]
+    mcftr = load_data_neon_sync("mcftr").set_index("TRADEDATE")[['CLOSE']]
     selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX', 'MCFTR'])
     # st.subheader(f"""IMOEX""")
-    if selected_stock == 'IMOEX':
-        stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
-                                           "CLOSE": "PX_LAST",
-                                           "LOW": "PX_LOW",
-                                           "HIGH": "PX_HIGH",
-                                           "VALTODAY_RUR": "PX_TURNOVER"})[
-            ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
-    elif selected_stock == 'IMOEX2':
+    # if selected_stock == 'IMOEX':
+    #     stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
+    #                                        "CLOSE": "PX_LAST",
+    #                                        "LOW": "PX_LOW",
+    #                                        "HIGH": "PX_HIGH",
+    #                                        "VALTODAY_RUR": "PX_TURNOVER"})[
+    #         ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
+    if selected_stock == 'IMOEX2':
         stock_data = imoex2.rename(columns={"OPEN": "PX_OPEN",
                                             "CLOSE": "PX_LAST",
                                             "LOW": "PX_LOW",
@@ -449,7 +465,7 @@ def main():
         stock_data['PX_OPEN'] = stock_data['PX_LAST']
         stock_data['PX_LOW'] = stock_data['PX_LAST']
         stock_data['PX_HIGH'] = stock_data['PX_LAST']
-        stock_data['PX_TURNOVER'] = imoex['VALTODAY_RUR']
+        stock_data['PX_TURNOVER'] = imoex2['VALTODAY_RUR']
     try:
         rt_candle, time_updated = get_current_candle("SNDX", selected_stock)
         if rt_candle is None:

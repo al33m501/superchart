@@ -4,12 +4,19 @@ import pandas as pd
 import os
 import requests
 from dotenv import load_dotenv
+from sqlalchemy import (
+    create_engine, text
+)
+import asyncio
+from sqlalchemy.ext.asyncio import create_async_engine
 
 load_dotenv()
 
 
 class APIMOEXError(Exception):
     pass
+
+url = os.getenv("NEON_URL")
 
 
 with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'cert.p'), 'rb') as f:
@@ -35,12 +42,27 @@ def get_current_stock_table(exchange):
     data = pd.DataFrame(data['marketdata']['data'], columns=data['marketdata']['columns'])
     return data
 
+async def load_data_neon(query):
+    engine = create_async_engine(url)
+    try:
+        async with engine.begin() as conn:
+            result = await conn.execute(text(query))
+            return pd.DataFrame(result)
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return []
+    finally:
+        await engine.dispose()
+
+
+def load_data_neon_sync(table):
+    df = asyncio.run(load_data_neon(f"select * from {table}"))
+    return df
+
 
 def get_stock_table(min_turnover=0):
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'last_prices.p'), 'rb') as f:
-        last_prices = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'div_table.p'), 'rb') as f:
-        div_table = pickle.load(f)
+    last_prices = load_data_neon_sync("last_prices")
+    div_table = load_data_neon_sync("div_table")
     stock_table = get_current_stock_table("MOEX").set_index("SECID")[['LAST', 'VALTODAY', 'SYSTIME']].dropna()
     stock_table = pd.merge(left=stock_table, left_index=True,
                            right=last_prices.rename(columns={"PX_LAST": "yesterday_price"}), right_index=True)
