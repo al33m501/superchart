@@ -1,0 +1,1 @@
+streamlit run superchart/moex_stocks.py
