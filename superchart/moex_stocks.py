@@ -440,7 +440,7 @@ def main():
             [stock_data_idx[stock_data_idx.index == stock_data_idx.index[-1]], rt_candle_idx['PX_LAST']])
         today_logdiff = compute_logdiff(stock_datafordiff, idx_datafordiff).iloc[-1]
 
-        st.markdown(f"Diff. updated at: **{benchmark_raw.index[-1]:%d.%m.%Y} {time_updated_idx}**")
+        st.markdown(f"Diff. updated at: **{stock_datafordiff.index[-1]:%d.%m.%Y} {time_updated_idx}**")
 
         if alpha_1d > 0:
             st.markdown(

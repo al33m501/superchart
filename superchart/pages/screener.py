@@ -17,13 +17,14 @@ class APIMOEXError(Exception):
     pass
 
 url = os.getenv("NEON_URL")
+token = os.getenv("APIMOEX_TOKEN")
 
 
 EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"},
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
                 "SNDX": {"market": "index", "engine": "stock", "board": "SNDX"}}
-token = os.getenv("APIMOEX_TOKEN")
+
 
 def get_current_stock_table(exchange):
     arguments = {}
@@ -58,7 +59,7 @@ def load_data_neon_sync(table):
 
 
 def get_stock_table(min_turnover=0):
-    last_prices = load_data_neon_sync("last_prices").set_index("index")
+    last_prices = load_data_neon_sync("last_prices2").set_index("index")
     div_table = load_data_neon_sync("div_table")
     stock_table = get_current_stock_table("MOEX").set_index("SECID")[['LAST', 'VALTODAY', 'SYSTIME']].dropna()
     stock_table = pd.merge(left=stock_table, left_index=True,

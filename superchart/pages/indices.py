@@ -23,6 +23,7 @@ class APIMOEXError(Exception):
 
 
 url = os.getenv("NEON_URL")
+
 EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"},
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
@@ -441,7 +442,7 @@ def main():
                     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
-    imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")[['CLOSE']]
+    imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")
     mcftr = load_data_neon_sync("mcftr").set_index("TRADEDATE")[['CLOSE']]
     selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX', 'MCFTR'])
     # st.subheader(f"""IMOEX""")
