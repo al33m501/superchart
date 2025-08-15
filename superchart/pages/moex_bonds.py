@@ -239,7 +239,7 @@ def main():
     stock_data.index = pd.to_datetime(stock_data.index)
     # try:
     rt = get_rt(selected_stock)
-    stock_data = pd.concat([stock_data, rt.set_index("TRADEDATE")])
+    stock_data = pd.concat([stock_data, rt.set_index("date")])
     stock_data.index = pd.to_datetime(stock_data.index)
     # except:
     #     pass
