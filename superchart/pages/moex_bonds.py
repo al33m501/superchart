@@ -209,12 +209,12 @@ def main():
     selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.to_list())
     short_stock_name = re.sub(r'\([^)]*\)', '', selected_stock)
     stock_data = base_dict[selected_stock][['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']]
-    try:
-        rt = get_rt(selected_stock)
-        stock_data = pd.concat([stock_data, rt.set_index("TRADEDATE")])
-        stock_data.index = pd.to_datetime(stock_data.index)
-    except:
-        pass
+    # try:
+    rt = get_rt(selected_stock)
+    stock_data = pd.concat([stock_data, rt.set_index("TRADEDATE")])
+    stock_data.index = pd.to_datetime(stock_data.index)
+    # except:
+    #     pass
 
     st.subheader(f"""{short_stock_name}""")
     st.markdown(f"Price updated at: **{stock_data.index[-1]}**")
