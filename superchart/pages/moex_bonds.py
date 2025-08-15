@@ -232,7 +232,7 @@ def main():
 
     ticker_turnovers = load_data_neon_sync("ticker_list_bonds")
 
-    selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.to_list())
+    selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers['instrument'].to_list())
     short_stock_name = re.sub(r'\([^)]*\)', '', selected_stock)
     stock_data = load_data_neon_base_dict(selected_stock).set_index("date")
     stock_data.index = pd.to_datetime(stock_data.index)

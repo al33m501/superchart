@@ -360,7 +360,7 @@ def main():
     #     imoex2 = pickle.load(f)
     ticker_turnovers = load_data_neon_sync("ticker_list").set_index('index')['0']
     benchmark_raw = load_data_neon_sync("mcftr").set_index("TRADEDATE")['CLOSE']
-    imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")['CLOSE']
+    imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")[['CLOSE']]
     div_table = load_data_neon_sync("div_table")
 
     selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.index.to_list())
@@ -421,7 +421,7 @@ def main():
         stock_data_idx = imoex2['CLOSE']
         rt_candle_idx, time_updated_idx = get_current_candle_idx("SNDX", "IMOEX2")
 
-        stock_data = base_dict[selected_stock][['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
+        stock_data = load_data_neon_base_dict(selected_stock).set_index("Date")[['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
 
         alpha_1d = ((rt_candle['PX_LAST'].iloc[-1] - stock_data['PX_LAST'].iloc[-1]) / stock_data['PX_LAST'].iloc[-1]) - \
                    ((rt_candle_idx['PX_LAST'].iloc[-1] - stock_data_idx.iloc[-1]) / stock_data_idx.iloc[-1])
