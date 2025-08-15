@@ -2,5 +2,4 @@
 __pycache__
 .env
 .devcontainer
-.python-version
 bond_translator_nottr.py
