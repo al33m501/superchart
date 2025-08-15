@@ -443,16 +443,17 @@ def main():
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
     imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")
+    imoex = load_data_neon_sync("imoex").set_index("TRADEDATE")
     mcftr = load_data_neon_sync("mcftr").set_index("TRADEDATE")['CLOSE']
-    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'MCFTR'])
-    # st.subheader(f"""IMOEX""")
-    # if selected_stock == 'IMOEX':
-    #     stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
-    #                                        "CLOSE": "PX_LAST",
-    #                                        "LOW": "PX_LOW",
-    #                                        "HIGH": "PX_HIGH",
-    #                                        "VALTODAY_RUR": "PX_TURNOVER"})[
-    #         ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
+    selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX', 'MCFTR'])
+    st.subheader(f"""IMOEX""")
+    if selected_stock == 'IMOEX':
+        stock_data = imoex.rename(columns={"OPEN": "PX_OPEN",
+                                           "CLOSE": "PX_LAST",
+                                           "LOW": "PX_LOW",
+                                           "HIGH": "PX_HIGH",
+                                           "VALTODAY_RUR": "PX_TURNOVER"})[
+            ['PX_OPEN', 'PX_LAST', 'PX_LOW', 'PX_HIGH', 'PX_TURNOVER']]
     if selected_stock == 'IMOEX2':
         stock_data = imoex2.rename(columns={"OPEN": "PX_OPEN",
                                             "CLOSE": "PX_LAST",
