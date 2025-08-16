@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from sqlalchemy import (
     create_engine, text
 )
+from sqlalchemy.pool import NullPool
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
 load_dotenv()
@@ -413,7 +414,7 @@ def resample_candlestick(stock_data, timeframe):
     return resampled_stock_data.rename(index={resampled_stock_data.index[-1]: stock_data.index[-1]}).dropna()
 
 async def load_data_neon(query):
-    engine = create_async_engine(url)
+    engine = create_async_engine(url, connect_args={"statement_cache_size": 0}, poolclass=NullPool)
     try:
         async with engine.begin() as conn:
             result = await conn.execute(text(query))
@@ -442,7 +443,7 @@ def main():
                     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
-    imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")
+    imoex2 = load_data_neon_sync("imoex2_2").set_index("TRADEDATE")
     imoex = load_data_neon_sync("imoex").set_index("TRADEDATE")
     mcftr = load_data_neon_sync("mcftr").set_index("TRADEDATE")['CLOSE']
     selected_stock = st.sidebar.selectbox("Select index:", ['IMOEX2', 'IMOEX', 'MCFTR'])
