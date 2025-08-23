@@ -360,7 +360,7 @@ def main():
     #     imoex2 = pickle.load(f)
     ticker_turnovers = load_data_neon_sync("ticker_list").set_index('index')['0']
     benchmark_raw = load_data_neon_sync("mcftr").set_index("TRADEDATE")['CLOSE']
-    imoex2 = load_data_neon_sync("imoex2").set_index("TRADEDATE")[['CLOSE']]
+    imoex2 = load_data_neon_sync("imoex2_2").set_index("TRADEDATE")[['CLOSE']]
     div_table = load_data_neon_sync("div_table")
 
     selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.index.to_list())
