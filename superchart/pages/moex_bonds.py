@@ -240,12 +240,13 @@ def main():
     # try:
     rt = get_rt(selected_stock)
     stock_data = pd.concat([stock_data, rt.set_index("date")])
-    stock_data.index = pd.to_datetime(stock_data.index)
+
     # except:
     #     pass
 
     st.subheader(f"""{short_stock_name}""")
     st.markdown(f"Price updated at: **{stock_data.index[-1]}**")
+    stock_data.index = pd.to_datetime(stock_data.index).normalize()
     selected_timeframe = st.selectbox("Select timeframe:", ['Daily', 'Weekly', 'Monthly'])
 
     if selected_timeframe == 'Daily':
