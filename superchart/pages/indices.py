@@ -15,6 +15,7 @@ from sqlalchemy.pool import NullPool
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
 load_dotenv()
+CACHE_TTL_SECONDS = 300
 
 token = os.getenv("APIMOEX_TOKEN")
 
@@ -426,6 +427,7 @@ async def load_data_neon(query):
         await engine.dispose()
 
 
+@st.cache_data(show_spinner=False, ttl=CACHE_TTL_SECONDS)
 def load_data_neon_sync(table):
     df = asyncio.run(load_data_neon(f"select * from {table}"))
     return df

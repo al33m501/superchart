@@ -17,6 +17,7 @@ import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
 
 load_dotenv()
+CACHE_TTL_SECONDS = 300
 
 
 class APIMOEXError(Exception):
@@ -204,10 +205,13 @@ async def load_data_neon(query):
         await engine.dispose()
 
 
+@st.cache_data(show_spinner=False, ttl=CACHE_TTL_SECONDS)
 def load_data_neon_sync(table):
     df = asyncio.run(load_data_neon(f"select * from {table}"))
     return df
 
+
+@st.cache_data(show_spinner=False, ttl=CACHE_TTL_SECONDS)
 def load_data_neon_base_dict(ticker):
     df = asyncio.run(load_data_neon(f"select * from base_dict_bonds where ticker = '{ticker}'"))
     return df
