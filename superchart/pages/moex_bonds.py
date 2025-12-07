@@ -242,8 +242,8 @@ def main():
     stock_data = load_data_neon_base_dict(selected_stock).set_index("date")
     stock_data.index = pd.to_datetime(stock_data.index)
     # try:
-    rt = get_rt(selected_stock)
-    stock_data = pd.concat([stock_data, rt.set_index("date")])
+    # rt = get_rt(selected_stock)
+    # stock_data = pd.concat([stock_data, rt.set_index("date")])
 
     # except:
     #     pass
