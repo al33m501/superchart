@@ -142,6 +142,7 @@ def main():
         render_all(50e6)
     elif data_select == '100M₽':
         render_all(100e6)
+    print()
     # date = st.date_input("Select start date", value=dt(2022, 7, 25))
     # st.write("Selected date:", date)
 
