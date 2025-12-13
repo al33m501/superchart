@@ -62,6 +62,7 @@ def load_data_neon_sync(table):
 
 def get_stock_table(min_turnover=0):
     last_prices = load_data_neon_sync("last_prices2").set_index("index")
+    print(f"LSSSR {last_prices}")
     div_table = load_data_neon_sync("div_table")
     stock_table = get_current_stock_table("MOEX").set_index("SECID")[['LAST', 'VALTODAY', 'SYSTIME']].dropna()
     stock_table = pd.merge(left=stock_table, left_index=True,
