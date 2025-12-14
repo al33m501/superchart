@@ -2,22 +2,15 @@ import streamlit as st
 import json
 import re
 from streamlit_lightweight_charts import renderLightweightCharts
-from sqlalchemy.pool import NullPool
-# import pickle
+import pickle
 import os
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
 import asyncio
 import pandas as pd
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy import (
-    create_engine, text
-)
-import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine
 
 load_dotenv()
-CACHE_TTL_SECONDS = 300
 
 
 class APIMOEXError(Exception):
@@ -28,31 +21,7 @@ EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"}
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
                 "SNDX": {"market": "index", "engine": "stock", "board": "SNDX"}}
-
-url = os.getenv("NEON_URL")
-
-
-async def load_data_raw_sql_async():
-    engine = create_async_engine(url, poolclass=NullPool)
-    try:
-        async with engine.begin() as conn:
-            query = f"""
-            select * from bars_daily_live2 bdl 
-            """
-            result = await conn.execute(text(query))
-            return pd.DataFrame(result)
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        return []
-    finally:
-        await engine.dispose()
-
-
-def get_rt(instrument):
-    df = asyncio.run(load_data_raw_sql_async())
-    df = df[df['SECID'] == instrument]
-    return df
-
+# token = os.getenv("APIMOEX_TOKEN")
 
 def render_candlestick_chart(data):
     data = data.rename(
@@ -192,30 +161,6 @@ def resample_candlestick(stock_data, timeframe):
     resampled_stock_data = stock_data.copy().resample(timeframe).apply(apply_map)
     return resampled_stock_data.rename(index={resampled_stock_data.index[-1]: stock_data.index[-1]}).dropna()
 
-async def load_data_neon(query):
-    engine = create_async_engine(url)
-    try:
-        async with engine.begin() as conn:
-            result = await conn.execute(text(query))
-            return pd.DataFrame(result)
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        return []
-    finally:
-        await engine.dispose()
-
-
-@st.cache_data(show_spinner=False, ttl=CACHE_TTL_SECONDS)
-def load_data_neon_sync(table):
-    df = asyncio.run(load_data_neon(f"select * from {table}"))
-    return df
-
-
-@st.cache_data(show_spinner=False, ttl=CACHE_TTL_SECONDS)
-def load_data_neon_base_dict(ticker):
-    df = asyncio.run(load_data_neon(f"select * from base_dict_bonds where ticker = '{ticker}'"))
-    return df
-
 
 def main():
     st.set_page_config(
@@ -230,27 +175,22 @@ def main():
                     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
-    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list_bonds.p'), 'rb') as f:
-    #     ticker_turnovers = pickle.load(f)
-    # with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'base_dict_bonds.p'), 'rb') as f:
-    #     base_dict = pickle.load(f)
-
-    ticker_turnovers = load_data_neon_sync("ticker_list_bonds")
-
-    selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers['instrument'].to_list())
+    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list_bonds.p'), 'rb') as f:
+        ticker_turnovers = pickle.load(f)
+    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'base_dict_bonds.p'), 'rb') as f:
+        base_dict = pickle.load(f)
+    selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.to_list())
     short_stock_name = re.sub(r'\([^)]*\)', '', selected_stock)
-    stock_data = load_data_neon_base_dict(selected_stock).set_index("date")
-    stock_data.index = pd.to_datetime(stock_data.index)
+    stock_data = base_dict[selected_stock][['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']]
     # try:
-    # rt = get_rt(selected_stock)
-    # stock_data = pd.concat([stock_data, rt.set_index("date")])
-
+    #     rt = get_rt(selected_stock)
+    #     stock_data = pd.concat([stock_data, rt.set_index("TRADEDATE")])
+    #     stock_data.index = pd.to_datetime(stock_data.index)
     # except:
     #     pass
 
     st.subheader(f"""{short_stock_name}""")
     st.markdown(f"Price updated at: **{stock_data.index[-1]}**")
-    stock_data.index = pd.to_datetime(stock_data.index).normalize()
     selected_timeframe = st.selectbox("Select timeframe:", ['Daily', 'Weekly', 'Monthly'])
 
     if selected_timeframe == 'Daily':
