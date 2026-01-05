@@ -158,6 +158,7 @@ def resample_candlestick(stock_data, timeframe):
                  'low_YTM': 'min',
                  'last_YTM': 'last',
                  'value': "sum"}
+    print(stock_data.copy().index)
     resampled_stock_data = stock_data.copy().resample(timeframe).apply(apply_map)
     return resampled_stock_data.rename(index={resampled_stock_data.index[-1]: stock_data.index[-1]}).dropna()
 
