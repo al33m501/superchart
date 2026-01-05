@@ -195,6 +195,7 @@ def main():
         render_candlestick_chart(
             stock_data[['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']].dropna().iloc[-252:])
     elif selected_timeframe == 'Weekly':
+        print(stock_data[['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']].dropna().iloc[-252 * 5:])
         render_candlestick_chart(
             resample_candlestick(
                 stock_data[['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']].dropna().iloc[-252 * 5:],
