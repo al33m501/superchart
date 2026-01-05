@@ -191,12 +191,11 @@ def main():
     st.subheader(f"""{short_stock_name}""")
     st.markdown(f"Price updated at: **{stock_data.index[-1]}**")
     selected_timeframe = st.selectbox("Select timeframe:", ['Daily', 'Weekly', 'Monthly'])
-
+    stock_data.index = pd.to_datetime(stock_data.index)
     if selected_timeframe == 'Daily':
         render_candlestick_chart(
             stock_data[['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']].dropna().iloc[-252:])
     elif selected_timeframe == 'Weekly':
-        print(stock_data[['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']].dropna().iloc[-252 * 5:])
         render_candlestick_chart(
             resample_candlestick(
                 stock_data[['open_YTM', 'last_YTM', 'low_YTM', 'high_YTM', 'value']].dropna().iloc[-252 * 5:],
