@@ -291,6 +291,7 @@ def compute_logdiff(series_1, series_2):
     logdata = np.log(pd.concat([series_1, series_2], axis=1).dropna())
     logdata = logdata - logdata.iloc[0]
     logdata.columns = [0, 1]
+
     return logdata[0] - logdata[1]
 
 
