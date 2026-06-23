@@ -19,6 +19,7 @@ class APIMOEXError(Exception):
 
 
 
+
 EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"},
                 "MOEX CETS": {"market": "selt", "engine": "currency", "board": "cets"},
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
