@@ -2,7 +2,6 @@ import streamlit as st
 import json
 import re
 from streamlit_lightweight_charts import renderLightweightCharts
-import pickle
 import os
 from sqlalchemy import create_engine
 from dotenv import load_dotenv
@@ -200,10 +199,12 @@ def main():
                     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
     st.sidebar.subheader("""📈 Superchart""")
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list_zo_bonds.p'), 'rb') as f:
-        ticker_turnovers = pickle.load(f)
-    with open(os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'base_dict_bonds.p'), 'rb') as f:
-        base_dict = pickle.load(f)
+    ticker_turnovers = pd.read_pickle(
+        os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'ticker_list_zo_bonds.p')
+    )
+    base_dict = pd.read_pickle(
+        os.path.join(os.getenv("PATH_TO_DATA_FOLDER"), 'base_dict_bonds.p')
+    )
     selected_stock = st.sidebar.selectbox("Select asset:", ticker_turnovers.to_list())
     selected_chart_type = st.sidebar.selectbox("Select YTM or RUB:", ['YTM', 'RUB'])
     short_stock_name = re.sub(r'\([^)]*\)', '', selected_stock)
