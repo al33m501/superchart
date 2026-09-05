@@ -3,7 +3,6 @@ import json
 import re
 from streamlit_lightweight_charts import renderLightweightCharts
 import os
-from sqlalchemy import create_engine
 from dotenv import load_dotenv
 import pandas as pd
 
@@ -19,34 +18,6 @@ EXCHANGE_MAP = {"MOEX": {"market": "shares", "engine": "stock", "board": "tqbr"}
                 "MOEX SPBFUT": {"market": "forts", "engine": "futures", "board": "spbfut"},
                 "SNDX": {"market": "index", "engine": "stock", "board": "SNDX"}}
 # token = os.getenv("APIMOEX_TOKEN")
-
-def get_rt(instrument):
-    engine = create_engine(
-        f"mysql+mysqlconnector://algouser:algouser@192.168.206.34:3306/bonds_moex_db")
-    query = f'''
-        select SYSTIME, open_YTM, high_YTM, low_YTM, last_YTM, value from bars_daily_live_zo bdl 
-        left join symbol s on s.secid = bdl.SECID 
-        where instrument='{instrument}'
-        limit 1
-        '''
-    with engine.connect() as conn:
-        data = conn.execute(query)
-    rt = pd.DataFrame(data.fetchall(), columns=data.keys())
-    return rt.rename(columns={"SYSTIME": "TRADEDATE"})
-
-
-def get_instrument_isin(instrument):
-    engine = create_engine(
-        f"mysql+mysqlconnector://algouser:algouser@192.168.206.34:3306/bonds_moex_db")
-    query = f'''
-        select isin from bonds_moex_db.symbol
-        where instrument='{instrument}'
-        limit 1
-        '''
-    with engine.connect() as conn:
-        data = conn.execute(query)
-    rt = pd.DataFrame(data.fetchall(), columns=data.keys())
-    return rt['isin'].iloc[0]
 
 
 def render_candlestick_chart(data):
@@ -216,7 +187,6 @@ def main():
     #     pass
 
     st.subheader(f"""{short_stock_name}""")
-    st.markdown(f"{get_instrument_isin(selected_stock)}")
     st.markdown(f"Price updated at: **{stock_data.index[-1]}**")
     stock_data.index = pd.to_datetime(stock_data.index).normalize()
     selected_timeframe = st.selectbox("Select timeframe:", ['Daily', 'Weekly', 'Monthly'])
