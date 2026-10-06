@@ -1,6 +1,7 @@
 """MOEX futures candles from local daily pickles and the MOEX ISS API."""
 
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from streamlit_lightweight_charts import renderLightweightCharts
 
 load_dotenv()
 
+LOGGER = logging.getLogger(__name__)
 FUTURES = ("CRZ6", "MXZ6", "SiZ6")
 PRICE_PRECISION = {"CRZ6": 3, "MXZ6": 0, "SiZ6": 0}
 OHLC = ["open", "high", "low", "close"]
@@ -46,6 +48,8 @@ def get_current_candle(ticker):
         host + "/iss/engines/futures/markets/forts/boards/RFUD/securities/{}.json".format(ticker),
         headers=headers,
         params={"iss.meta": "off", "iss.only": "marketdata"},
+        # Match the stocks page: skip certificate verification for APIM.
+        verify=False if token else True,
         timeout=10,
     )
     response.raise_for_status()
@@ -147,7 +151,12 @@ def main():
             updated_at = "{:%d.%m.%Y} {}".format(candle.index[0], quote_time)
             if not os.getenv("APIMOEX_TOKEN"):
                 st.caption("Public MOEX ISS quotes may be delayed.")
-    except (requests.RequestException, KeyError, ValueError, TypeError):
+    except (requests.RequestException, KeyError, ValueError, TypeError) as exc:
+        LOGGER.warning(
+            "Current MOEX quote failed for %s: %s (HTTP %s)",
+            ticker, type(exc).__name__,
+            getattr(getattr(exc, "response", None), "status_code", None),
+        )
         st.caption("Current quote is unavailable. Showing daily history.")
 
     change_label = ""
