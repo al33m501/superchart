@@ -1,5 +1,8 @@
 .idea
 __pycache__
 .env
+.venv/
+.cache/
+.pytest_cache/
 .devcontainer
 bond_translator_nottr.py

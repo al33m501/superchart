@@ -1,1 +1,1 @@
-web: streamlit run superchart/moex_stocks.py --server.port $PORT
+web: python -m superchart.run
