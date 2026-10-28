@@ -5,7 +5,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from superchart.screener_data import (
-    MEDIAN, RETURN, TURNOVER, read_snapshot, refresh_interval, snapshot_table,
+    MEDIAN, RETURN, TURNOVER, read_refresh_status, read_snapshot, refresh_interval, snapshot_table,
 )
 
 
@@ -23,9 +23,24 @@ def display_table(table):
 @st.fragment(run_every="30s")
 def render_all(min_turnover):
     snapshot = read_snapshot()
+    with st.expander("Состояние загрузки", expanded=snapshot is None):
+        status = read_refresh_status()
+        if status is None:
+            st.write("Фоновая загрузка ещё не зарегистрировала попытку. "
+                     "Проверьте, что приложение запущено командой python -m superchart.run.")
+        else:
+            attempted_at = pd.Timestamp(status["attempted_at"]).tz_convert("Europe/Moscow")
+            st.write("Последняя попытка: {:%d.%m.%Y %H:%M:%S} МСК".format(attempted_at))
+            st.write(status["message"])
+            status_age = (pd.Timestamp.now(tz="UTC") - pd.Timestamp(status["updated_at"])).total_seconds()
+            if status_age > max(180, 3 * refresh_interval()):
+                st.write("Новых попыток давно нет: проверьте, что процесс обновления работает.")
+        if snapshot:
+            saved_at = pd.Timestamp(snapshot["saved_at"]).tz_convert("Europe/Moscow")
+            st.write("Последний успешный расчёт сохранён: {:%d.%m.%Y %H:%M:%S} МСК".format(saved_at))
     if snapshot is None:
         st.error("Не удалось получить данные скринера: сохранённого результата пока нет. "
-                 "Следующая попытка загрузки выполнится автоматически.")
+                 "Подробности — в состоянии загрузки выше.")
         return
 
     market_time = pd.Timestamp(snapshot["market_time"])

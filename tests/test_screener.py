@@ -55,6 +55,7 @@ def test_fetch_calculates_dividends_with_single_bounded_request(moex):
     assert table.loc["AAA", data.TURNOVER] == 500e6
     get.assert_called_once()
     assert get.call_args.kwargs["timeout"] == (5, 15)
+    assert get.call_args.kwargs["verify"] is False
     assert get.call_args.kwargs["headers"] == {"Authorization": "Bearer test-token"}
     response.raise_for_status.assert_called_once()
 
@@ -77,6 +78,7 @@ def test_failure_preserves_last_successful_result(cache, snapshot, moex, failure
     else:
         response.json.return_value["marketdata"]["data"] = [["AAA", None, None, None]]
     assert data.refresh_once() is False
+    assert data.read_refresh_status()["state"] == "error"
     assert cache.read_bytes() == original
 
 
@@ -91,10 +93,12 @@ def test_recovery_and_older_response(cache, snapshot, moex):
     data.write_snapshot(snapshot)
     moex[0].json.return_value["marketdata"]["data"][0][3] = "2026-10-28 15:01:00"
     assert data.refresh_once() is True
+    assert data.read_refresh_status()["state"] == "success"
     assert data.read_snapshot()["market_time"] == "2026-10-28T15:01:00"
     original = cache.read_bytes()
     moex[0].json.return_value["marketdata"]["data"][0][3] = "2026-10-28 14:00:00"
     assert data.refresh_once() is False
+    assert data.read_refresh_status()["state"] == "error"
     assert cache.read_bytes() == original
 
 
@@ -134,7 +138,7 @@ def test_page_reads_cache_filters_and_never_calls_moex(cache, snapshot, monkeypa
     data.write_snapshot(snapshot)
     get = Mock(side_effect=AssertionError("Page must not request MOEX"))
     monkeypatch.setattr(data.requests, "get", get)
-    app = AppTest.from_file("superchart/pages/screener.py").run()
+    app = AppTest.from_file("superchart/pages/screener.py", default_timeout=10).run()
     assert not app.exception
     assert len(app.table) == 4
     assert list(app.table[0].value.index) == ["AAA"]
@@ -147,7 +151,7 @@ def test_page_reads_cache_filters_and_never_calls_moex(cache, snapshot, monkeypa
 
 def test_page_empty_then_new_snapshot_then_stale(cache, snapshot, monkeypatch):
     monkeypatch.setattr(data.requests, "get", Mock(side_effect=AssertionError("No network in UI")))
-    app = AppTest.from_file("superchart/pages/screener.py").run()
+    app = AppTest.from_file("superchart/pages/screener.py", default_timeout=10).run()
     assert not app.exception
     assert len(app.error) == 1
     assert len(app.table) == 0
@@ -199,3 +203,16 @@ def test_launcher_runs_updater_and_stops_children(monkeypatch, shutdown):
         web.wait.assert_called_once_with(timeout=10)
     else:
         web.terminate.assert_not_called()
+
+
+def test_error_status_is_visible_without_a_cache(cache, moex):
+    moex[1].side_effect = requests.exceptions.SSLError("secret-token-must-not-leak")
+    assert data.refresh_once() is False
+    status = data.read_refresh_status()
+    assert status["state"] == "error"
+    assert "SSLError" in status["message"]
+    assert "secret-token" not in status["message"]
+    app = AppTest.from_file("superchart/pages/screener.py", default_timeout=10).run()
+    assert not app.exception
+    assert len(app.error) == 1
+    assert any("SSLError" in item.value for item in app.markdown)
